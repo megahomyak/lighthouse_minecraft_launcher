@@ -9,8 +9,8 @@ def download(directory, url):
 version = requests.get("https://piston-meta.mojang.com/v1/packages/924a2dcd8bdc31f8e9d36229811c298b3537bbc7/1.5.2.json").json()
 download("version", version["downloads"]["client"]["url"])
 for library in version["libraries"]:
-    try: download("version/library", library["downloads"]["artifact"]["url"])
+    try: download("version/libraries", library["downloads"]["artifact"]["url"])
     except KeyError: pass
 
-    try: download("version/library", library["downloads"]["classifiers"]["natives-linux"]["url"])
+    try: download("version/libraries", library["downloads"]["classifiers"]["natives-linux"]["url"])
     except KeyError: pass
