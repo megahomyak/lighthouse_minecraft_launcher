@@ -1,9 +1,9 @@
 import os
 
-class_path = ["$(realpath version/client.jar)"]
+class_path = ["version/client.jar"]
 for file_name in os.listdir("version/libraries"):
-    class_path.append(f"$(realpath version/libraries/{file_name})")
-command = f"java -cp {':'.join(class_path)} -Djava.library.path=$(realpath version/libraries) net.minecraft.client.Minecraft"
+    class_path.append(f"version/libraries/{file_name}")
+command = f"/usr/lib/jvm/java-8-openjdk-amd64/bin/java -cp {':'.join(class_path)} net.minecraft.launchwrapper.Launch"
 print(command)
 print()
 os.system(command)
