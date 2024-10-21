@@ -59,7 +59,7 @@ for index, library in enumerate(version["libraries"]):
 
     try: download_file(f"libraries/natives/{index}.jar", library["downloads"]["classifiers"]["natives-linux"]["url"])
     except KeyError: pass
-    else: os.system(f"cd libraries/natives && unzip {index}.jar && rm {index}.jar && rm -r META-INF")
+    else: os.system(f"cd libraries/natives && unzip {index}.jar && rm {index}.jar && ( rm -r META-INF || true )")
 
 ### Preparing the runner script
 
