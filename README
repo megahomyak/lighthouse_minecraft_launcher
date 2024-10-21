@@ -1,1 +1,7 @@
-Currently building only for Linux. It's very crude and is intended to only support my case at this time
+"lighthouse" is a Linux-only (at the moment) CLI Minecraft launcher.
+
+USAGE:
+* Install all the necessary dependencies (currently messy, figure this out by running the program and seeing what fails, read on to learn about running)
+* Run the program (`python install.py`) to display a list of versions
+* Run the program with a version name as an argument to install that version into a directory named after that version. The version directory will be located under the current directory
+* Run `run.sh` inside of the version directory
