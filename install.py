@@ -72,6 +72,7 @@ for file_name in os.listdir("libraries"):
     class_path.append(f"libraries/{file_name}")
 
 with open("run.sh", "w") as f:
+    f.write("#!/usr/bin/sh\n")
     f.write(" ".join([
         shlex.quote(argument)
         for argument in [
@@ -84,3 +85,4 @@ with open("run.sh", "w") as f:
             "state",
         ]
     ]))
+os.system("chmod +x run.sh")
