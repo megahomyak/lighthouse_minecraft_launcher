@@ -1,4 +1,4 @@
-"lighthouse" is a Linux-only (at the moment) CLI Minecraft launcher.
+"lighthouse" is a Linux-only (at the moment) CLI Minecraft launcher. It is intended to help with understanding how Minecraft launchers work. The launcher is left pretty raw on purpose because tinkering with it is encouraged. Sometimes stuff will not work out of the box, and the launcher is kept simple enough to make it possible for you to fix it yourself. So far I've made it to only require pretty minor fixes. Don't expect this to be a non-nerd-friendly launcher.
 
 USAGE:
 * Install all the necessary dependencies (currently messy, figure this out by running the program and seeing what fails, read on to learn about running)
