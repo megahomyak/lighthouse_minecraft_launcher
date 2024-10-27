@@ -107,7 +107,7 @@ def run(version_id):
         arguments = config["run_arguments"]
         java_binary_path = config["java_binary_path"]
         print(f"Starting up {version_id} in a detached process")
-        subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen([java_binary_path, *arguments])
     else:
         raise Exception(f"Bad config version: expected {LIGHTHOUSE_VERSION_ID}, got {config_lighthouse_version_id}")
 
