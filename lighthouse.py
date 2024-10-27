@@ -1,8 +1,7 @@
 import json
-import requests
 import os
 import sys
-import urllib
+import urllib.request
 import zipfile
 import platform
 import subprocess
@@ -43,7 +42,8 @@ minecraft_jvm_os = {
 ### Downloading the version list
 
 def download_json(url):
-    return requests.get(url).json()
+    with urllib.request.urlopen(url) as response:
+        return json.load(response)
 
 def get_versions_list():
     #####
@@ -81,6 +81,11 @@ def download(url, path, expected_sha1_in_hex):
     else:
         print("EXISTS")
 
+def ensure_json(url, path, expected_sha1_in_hex):
+    download(url, path, expected_sha1_in_hex)
+    with open(path) as f:
+        return json.load(f)
+
 def list_():
     versions_list = get_versions_list()
     print("LATEST:")
@@ -90,8 +95,11 @@ def list_():
     for version in versions_list["versions"]:
         print(f"{version['id']} - {version['type'].upper()}")
 
+def get_version_path(version_id):
+    return os.path.join("versions", version_id)
+
 def run(version_id):
-    os.chdir(version_id)
+    os.chdir(get_version_path(version_id))
     with open(LIGHTHOUSE_CONFIG_NAME, "r") as f:
         config = json.load(f)
     config_lighthouse_version_id = config["lighthouse_version_id"]
@@ -104,14 +112,6 @@ def run(version_id):
         raise Exception(f"Bad config version: expected {LIGHTHOUSE_VERSION_ID}, got {config_lighthouse_version_id}")
 
 def ensure(version_id):
-    versions_list = get_versions_list()["versions"]
-    for version in versions_list:
-        if version["id"] == version_id:
-            version_url = version["url"]
-            break
-    else:
-        raise Exception(f"Can't find version {version_id}")
-
     #####
     print("Writing the Lighthouse warning file")
 
@@ -119,30 +119,56 @@ def ensure(version_id):
         f.write("This directory is used for the Lighthouse Minecraft launcher. Please, only modify the state of Minecraft version instances. Every other modification may break Lighthouse operations.")
 
     #####
-    print("Getting the version JSON")
-
-    version = requests.get(version_url).json()
+    versions_list = get_versions_list()["versions"]
+    for version in versions_list:
+        if version["id"] == version_id:
+            break
+    else:
+        raise Exception(f"Can't find version {version_id}")
 
     #####
-    print("Checking the runtime")
+    print("Checking the directory structure")
+
+    def mkdir(path):
+        try: os.mkdir(path)
+        except: pass
+        return path
+    versions_path = mkdir("versions")
+    version_path = get_version_path(version_id)
+    libraries_path = mkdir("libraries")
+    natives_path = mkdir("native_libraries")
+    state_path = mkdir(os.path.join(version_path, "state"))
+    assets_path = mkdir("assets")
+    runtimes_path = mkdir("runtimes")
+
+    #####
+    print("Checking the version JSON")
+
+    version = ensure_json(version["url"], os.path.join(versions_path, version_id + ".json"), version["sha1"])
+
+    #####
+    print("Checking the runtime directory")
 
     java_runtime_name = version["javaVersion"]["component"]
-    java_runtime_path = os.path.join("runtimes", java_runtime_name)
-    os.makedirs(java_runtime_path, exist_ok=True)
+    java_runtime_path = mkdir(os.path.join(runtimes_path, java_runtime_name))
+
     #####
     print("Getting the runtimes list")
 
-    runtimes = requests.get("https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json").json()
-    files_url = runtimes[minecraft_jvm_os][java_runtime_name][0]["manifest"]["url"]
-    #####
-    print("Getting the runtime files")
+    runtimes = download_json("https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json")
+    manifest = runtimes[minecraft_jvm_os][java_runtime_name][0]["manifest"]
 
-    files = requests.get(files_url).json()["files"]
-    for path, file in files.items():
+    #####
+    print("Checking the runtime files")
+
+    runtime = ensure_json(manifest["url"], os.path.join(runtimes_path, java_runtime_name + ".json"), manifest["sha1"])
+
+    for path, file in runtime["files"].items():
         path = os.path.join(java_runtime_path, path)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         if file["type"] == "directory":
-            pass # Already created using os.makedirs above
+            try: os.mkdir(path)
+            except: pass
         elif file["type"] == "file":
             raw = file["downloads"]["raw"]
             download(raw["url"], path, raw["sha1"])
@@ -157,25 +183,13 @@ def ensure(version_id):
     #####
     print("Checking the client")
 
-    try: os.mkdir(version_id)
-    except: pass
-    os.chdir(version_id)
-    try: os.mkdir("libraries")
-    except: pass
-    try: os.mkdir(os.path.join("libraries", "natives"))
-    except: pass
-    try: os.mkdir("state")
-    except: pass
-
-    library_paths = []
-
-    NATIVES_DIR_PATH = os.path.join("libraries", "natives")
-
     client = version["downloads"]["client"]
-    download(client["url"], "client.jar", client["sha1"])
+    download(client["url"], os.path.join(version_path, "client.jar"), client["sha1"])
 
     #####
     print("Checking the libraries")
+
+    library_paths = []
 
     for index, library in enumerate(version["libraries"]):
         if "rules" in library:
@@ -194,47 +208,84 @@ def ensure(version_id):
         except KeyError:
             pass
         else:
-            provided_artifact_path = artifact["path"]
-            artifact_name = os.path.basename(provided_artifact_path)
-            actual_artifact_path = os.path.join("libraries", f"{index}-{artifact_name}")
-            download(artifact["url"], actual_artifact_path, artifact["sha1"])
-            library_paths.append(actual_artifact_path)
+            path = os.path.join(libraries_path, artifact["path"])
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            download(artifact["url"], path, artifact["sha1"])
+            library_paths.append(path)
 
         try:
             natives = library["downloads"]["classifiers"][f"natives-{current_os_name}"]
         except KeyError:
             pass
         else:
-            download(natives["url"], "natives.jar", natives["sha1"])
-            with zipfile.ZipFile("natives.jar") as f:
+            path = os.path.join(libraries_path, natives["path"])
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            download(natives["url"], path, natives["sha1"])
+            with zipfile.ZipFile(path) as f:
                 for member in f.namelist():
-                    if member != "META-INF":
-                        f.extract(member, NATIVES_DIR_PATH)
-            os.remove("natives.jar")
+                    for excluded in library["extract"]["exclude"]:
+                        if member.startswith(excluded):
+                            break
+                    else:
+                        f.extract(member, natives_path)
 
     #####
-    print("Writing the lighthouse data file")
+    print("Checking the assets")
 
-    class_path = ["client.jar"] + library_paths
-    java_binary_name = "java"
-    if current_os_name == "windows":
-        java_binary_name = "javaw.exe"
-    with open(LIGHTHOUSE_CONFIG_NAME, "w") as f:
-        json.dump(
-            {
-                "lighthouse_version_id": LIGHTHOUSE_VERSION_ID,
-                "run_arguments": [
-                    "-cp",
-                    os.pathsep.join(class_path),
-                    "-Djava.library.path=" + NATIVES_DIR_PATH,
-                    version["mainClass"],
-                    "--gameDir",
-                    "state",
-                ],
-                "java_binary_path": os.path.join("..", java_runtime_path, "bin", java_binary_name),
-            },
-            f,
-            indent=4,
-        )
+    assets = version["assetIndex"]
+    assets_index = assets["id"]
+    if assets_index == "pre-1.6":
+        assets_index = None
+        assets_index_path = mkdir(os.path.join(state_path, "resources"))
+        assets_json_name = version_id + ".json"
+    else:
+        assets_index_path = mkdir(os.path.join(assets_path, assets_index))
+        assets_json_name = assets_index + ".json"
+    assets_json_path = os.path.join(assets_path, assets_json_name)
+    assets_json = ensure_json(assets["url"], assets_json_path, assets["sha1"])
+    for asset_path, asset_info in assets_json["objects"].items():
+        hash_ = asset_info["hash"]
+        prefix = hash_[:2]
+        asset_path = os.path.join(assets_index_path, asset_path)
+        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
+        download(f"https://resources.download.minecraft.net/{prefix}/{hash_}", asset_path, hash_)
+
+    #####
+    print("Checking the Lighthouse data file... ", end="", flush=True)
+
+    lighthouse_config_path = os.path.join(version_path, LIGHTHOUSE_CONFIG_NAME)
+    if os.path.exists(lighthouse_config_path):
+        print("EXISTS")
+    else:
+        print("CREATING")
+        root_path = os.path.join("..", "..")
+        class_path = ["client.jar"] + [
+            os.path.join(root_path, path)
+            for path in library_paths
+        ]
+        java_binary_name = "java"
+        if current_os_name == "windows":
+            java_binary_name = "javaw.exe"
+        run_arguments = [
+            "-cp", os.pathsep.join(class_path),
+            "-Djava.library.path=" + os.path.join(root_path, natives_path),
+            version["mainClass"],
+            "--gameDir", "state",
+        ]
+        if assets_index is not None:
+            run_arguments.extend([
+                "--assetsDir", assets_path,
+                "--assetIndex", assets_index,
+            ])
+        with open(lighthouse_config_path, "w") as f:
+            json.dump(
+                {
+                    "lighthouse_version_id": LIGHTHOUSE_VERSION_ID,
+                    "run_arguments": run_arguments,
+                    "java_binary_path": os.path.join(root_path, java_runtime_path, "bin", java_binary_name),
+                },
+                f,
+                indent=4,
+            )
 
 main()

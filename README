@@ -1,7 +1,6 @@
-"Lighthouse" is a small CLI Minecraft Launcher intended for tinkerers.
+"Lighthouse" is a small CLI Minecraft Launcher intended for tinkerers. It has no dependencies outside of Python's standard library.
 
 USAGE:
-* Download dependencies using `pip` (`pip install -r requirements.txt`; you may use a Python virtual environment for this)
 * Go to the directory you'd like to use for storing launcher data
 * `.../lighthouse.py list` lists versions
 * `.../lighthouse.py ensure VERSION` ensures that all files for VERSION are downloaded
