@@ -146,6 +146,7 @@ def ensure(version_id):
     natives_path = mkdir("native_libraries")
     state_path = mkdir(os.path.join(version_path, "state"))
     assets_path = mkdir("assets")
+    asset_indexes_path = mkdir(os.path.join(assets_path, "indexes"))
     runtimes_path = mkdir("runtimes")
 
     #####
@@ -243,17 +244,18 @@ def ensure(version_id):
     assets_index = assets["id"]
     if assets_index == "pre-1.6":
         assets_index = None
-        assets_index_path = mkdir(os.path.join(state_path, "resources"))
         assets_json_name = version_id + "-resources.json"
     else:
-        assets_index_path = mkdir(os.path.join(assets_path, assets_index))
         assets_json_name = assets_index + ".json"
-    assets_json_path = os.path.join(assets_path, assets_json_name)
+    assets_json_path = os.path.join(asset_indexes_path, assets_json_name)
     assets_json = ensure_json(assets["url"], assets_json_path, assets["sha1"])
     for asset_path, asset_info in assets_json["objects"].items():
         hash_ = asset_info["hash"]
         prefix = hash_[:2]
-        asset_path = os.path.join(assets_index_path, asset_path)
+        if assets_index is None:
+            asset_path = os.path.join(state_path, "resources", asset_path)
+        else:
+            asset_path = os.path.join(assets_path, "objects", prefix, hash_)
         os.makedirs(os.path.dirname(asset_path), exist_ok=True)
         download(f"https://resources.download.minecraft.net/{prefix}/{hash_}", asset_path, hash_)
 
@@ -278,10 +280,12 @@ def ensure(version_id):
             "-Djava.library.path=" + os.path.join(root_path, natives_path),
             version["mainClass"],
             "--gameDir", "state",
+            "--accessToken", "-",
+            "--version", version_id,
         ]
         if assets_index is not None:
             run_arguments.extend([
-                "--assetsDir", assets_path,
+                "--assetsDir", os.path.join(root_path, assets_path),
                 "--assetIndex", assets_index,
             ])
         with open(lighthouse_config_path, "w") as f:
