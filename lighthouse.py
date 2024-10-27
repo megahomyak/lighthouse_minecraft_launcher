@@ -109,9 +109,10 @@ def run(version_id, is_detached):
     if config_lighthouse_version_id == LIGHTHOUSE_VERSION_ID:
         arguments = config["run_arguments"]
         java_binary_path = config["java_binary_path"]
-        print(f"Starting up {version_id} in a detached process")
+        print(f"Starting up {version_id}")
         if is_detached:
             subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("Detached")
         else:
             subprocess.run([java_binary_path, *arguments])
     else:
