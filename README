@@ -5,3 +5,4 @@ USAGE:
 * `.../lighthouse.py list` lists versions
 * `.../lighthouse.py ensure VERSION` ensures that all files for VERSION are downloaded
 * `.../lighthouse.py run VERSION` runs VERSION
+* `.../lighthouse.py run VERSION` detaches VERSION

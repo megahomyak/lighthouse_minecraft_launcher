@@ -63,7 +63,10 @@ def main():
         ensure(version_id)
     elif action == "run":
         version_id = sys.argv[2]
-        run(version_id)
+        run(version_id, is_detached=False)
+    elif action == "detach":
+        version_id = sys.argv[2]
+        run(version_id, is_detached=True)
     else:
         raise Exception(f"Invalid action name \"{action}\"")
 
@@ -98,7 +101,7 @@ def list_():
 def get_version_path(version_id):
     return os.path.join("versions", version_id)
 
-def run(version_id):
+def run(version_id, is_detached):
     os.chdir(get_version_path(version_id))
     with open(LIGHTHOUSE_CONFIG_NAME, "r") as f:
         config = json.load(f)
@@ -107,7 +110,10 @@ def run(version_id):
         arguments = config["run_arguments"]
         java_binary_path = config["java_binary_path"]
         print(f"Starting up {version_id} in a detached process")
-        subprocess.Popen([java_binary_path, *arguments])
+        if is_detached:
+            subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run([java_binary_path, *arguments])
     else:
         raise Exception(f"Bad config version: expected {LIGHTHOUSE_VERSION_ID}, got {config_lighthouse_version_id}")
 
@@ -237,7 +243,7 @@ def ensure(version_id):
     if assets_index == "pre-1.6":
         assets_index = None
         assets_index_path = mkdir(os.path.join(state_path, "resources"))
-        assets_json_name = version_id + ".json"
+        assets_json_name = version_id + "-resources.json"
     else:
         assets_index_path = mkdir(os.path.join(assets_path, assets_index))
         assets_json_name = assets_index + ".json"
