@@ -141,7 +141,7 @@ def ensure(version_id):
         except: pass
         return path
     versions_path = mkdir("versions")
-    version_path = get_version_path(version_id)
+    version_path = mkdir(get_version_path(version_id))
     libraries_path = mkdir("libraries")
     natives_path = mkdir("native_libraries")
     state_path = mkdir(os.path.join(version_path, "state"))
@@ -172,6 +172,7 @@ def ensure(version_id):
     runtime = ensure_json(manifest["url"], os.path.join(runtimes_path, java_runtime_name + ".json"), manifest["sha1"])
 
     for path, file in runtime["files"].items():
+        path = os.path.normpath(path)
         path = os.path.join(java_runtime_path, path)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         if file["type"] == "directory":
@@ -216,7 +217,7 @@ def ensure(version_id):
         except KeyError:
             pass
         else:
-            path = os.path.join(libraries_path, artifact["path"])
+            path = os.path.join(libraries_path, os.path.normpath(artifact["path"]))
             os.makedirs(os.path.dirname(path), exist_ok=True)
             download(artifact["url"], path, artifact["sha1"])
             library_paths.append(path)
@@ -226,7 +227,7 @@ def ensure(version_id):
         except KeyError:
             pass
         else:
-            path = os.path.join(libraries_path, natives["path"])
+            path = os.path.join(libraries_path, os.path.normpath(natives["path"]))
             os.makedirs(os.path.dirname(path), exist_ok=True)
             download(natives["url"], path, natives["sha1"])
             with zipfile.ZipFile(path) as f:
@@ -250,6 +251,7 @@ def ensure(version_id):
     assets_json_path = os.path.join(asset_indexes_path, assets_json_name)
     assets_json = ensure_json(assets["url"], assets_json_path, assets["sha1"])
     for asset_path, asset_info in assets_json["objects"].items():
+        asset_path = os.path.normpath(asset_path)
         hash_ = asset_info["hash"]
         prefix = hash_[:2]
         if assets_index is None:
