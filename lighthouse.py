@@ -10,7 +10,6 @@ import shutil
 import pathlib
 import hashlib
 
-LIGHTHOUSE_VERSION_ID = "megahomyak-1"
 LIGHTHOUSE_CONFIG_NAME = "lighthouse.config.json"
 
 # Stolen from portablemc
@@ -105,18 +104,14 @@ def run(version_id, is_detached):
     os.chdir(get_version_path(version_id))
     with open(LIGHTHOUSE_CONFIG_NAME, "r") as f:
         config = json.load(f)
-    config_lighthouse_version_id = config["lighthouse_version_id"]
-    if config_lighthouse_version_id == LIGHTHOUSE_VERSION_ID:
-        arguments = config["run_arguments"]
-        java_binary_path = config["java_binary_path"]
-        print(f"Starting up {version_id}")
-        if is_detached:
-            subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("Detached")
-        else:
-            subprocess.run([java_binary_path, *arguments])
+    arguments = config["run_arguments"]
+    java_binary_path = config["java_binary_path"]
+    print(f"Starting up {version_id}")
+    if is_detached:
+        subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("Detached")
     else:
-        raise Exception(f"Bad config version: expected {LIGHTHOUSE_VERSION_ID}, got {config_lighthouse_version_id}")
+        subprocess.run([java_binary_path, *arguments])
 
 def ensure(version_id):
     #####
@@ -293,7 +288,6 @@ def ensure(version_id):
         with open(lighthouse_config_path, "w") as f:
             json.dump(
                 {
-                    "lighthouse_version_id": LIGHTHOUSE_VERSION_ID,
                     "run_arguments": run_arguments,
                     "java_binary_path": os.path.join(root_path, java_runtime_path, "bin", java_binary_name),
                 },
