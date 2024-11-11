@@ -6,3 +6,17 @@ USAGE:
 * `.../lighthouse.py ensure VERSION` ensures that all files for VERSION are downloaded
 * `.../lighthouse.py run VERSION` runs VERSION
 * `.../lighthouse.py detach VERSION` detaches VERSION
+
+TIPS:
+* If your download fails on Windows and you want to retry it until it succeeds, use this in cmd:
+
+```
+:label
+your_lighthouse_invocation_command || goto :label
+```
+
+* ...and if on Linux, use this in Bash:
+
+```
+until your_lighthouse_invocation_command; do :; done
+```
