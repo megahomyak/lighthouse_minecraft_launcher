@@ -24,10 +24,16 @@ def main():
         fabric_version = None
 
     installers = download_json("https://meta.fabricmc.net/v2/versions/installer")
+    fabric_jar_path = os.path.join(fabric_dir, "fabric.jar")
     for installer in installers:
         if installer["stable"]:
             if installer["version"] != fabric_version:
-                urllib.request.urlretrieve(installer["url"], fabric_jar_path := os.path.join(fabric_dir, "fabric.jar"))
+                print(f"Downloading fabric {installer['version']}...")
+                urllib.request.urlretrieve(installer["url"], fabric_jar_path)
+                with open(fabric_version_path, "w") as f:
+                    f.write(installer["version"])
+            else:
+                print(f"Using downloaded fabric {installer['version']}")
             break
 
     minecraft_dir = os.path.join("versions", version_name, "state")
