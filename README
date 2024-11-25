@@ -6,6 +6,7 @@ USAGE:
 * `lighthouse-ensure VERSION DIRECTORY` ensures that all files for VERSION are downloaded in DIRECTORY
 * `lighthouse-run DIRECTORY` runs version from DIRECTORY
 * `lighthouse-detach DIRECTORY` detaches version from DIRECTORY
+* `lighthouse-fabricate DIRECTORY` installs Fabric (https://fabricmc.net) into DIRECTORY
 
 TIPS:
 * If your download fails on Windows and you want to retry it until it succeeds, use this in cmd:

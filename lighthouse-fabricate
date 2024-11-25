@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+
+import os
+import urllib.request
+import json
+import subprocess
+
+def download_json(url):
+    with urllib.request.urlopen(url) as response:
+        return json.load(response)
+
+try: os.mkdir(fabric_dir := "fabric")
+except: pass
+
+try:
+    with open(fabric_version_path := os.path.join(fabric_dir, "fabric_version")) as f:
+        fabric_version = str(f.read())
+except FileNotFoundError:
+    fabric_version = None
+
+installers = download_json("https://meta.fabricmc.net/v2/versions/installer")
+for installer in installers:
+    if installer["stable"]:
+        if installer["version"] != fabric_version:
+            urllib.request.urlretrieve(installer["url"], fabric_jar_path := os.path.join(fabric_dir, "fabric.jar"))
+        break
