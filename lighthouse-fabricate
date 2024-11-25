@@ -44,7 +44,7 @@ def main():
     with open(lighthouse_cfg_path := os.path.join("versions", version_name, "lighthouse.config.json")) as f:
         lighthouse_cfg = json.load(f)
 
-    subprocess.run(["java", "-jar", fabric_jar_path, "client", "-dir", minecraft_dir, "-mcversion", "1.21.3", "-launcher", "win32"])
+    subprocess.run(["java", "-jar", fabric_jar_path, "client", "-dir", minecraft_dir, "-mcversion", lighthouse_cfg["minecraft_version"], "-launcher", "win32"])
 
     new_libs = {}
     for root, _dirs, filenames in os.walk(new_libraries_dir := os.path.join(minecraft_dir, "libraries")):
