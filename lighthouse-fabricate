@@ -52,7 +52,7 @@ def main():
         if flagged:
             flagged = False
             continue
-        if arg.startswith("-"):
+        if arg.startswith("-") and "=" not in arg:
             flagged = True
         else:
             classname_idx = idx
