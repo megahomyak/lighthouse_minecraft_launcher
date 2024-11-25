@@ -13,13 +13,6 @@ import hashlib
 LIGHTHOUSE_CONFIG_NAME = "lighthouse.config.json"
 
 # Stolen from portablemc
-minecraft_jvm_os = {
-    "osx": {"x86_64": "mac-os", "arm64": "mac-os-arm64"},
-    "linux": {"x86": "linux-i386", "x86_64": "linux"},
-    "windows": {"x86": "windows-x86", "x86_64": "windows-x64", "arm64": "windows-arm64"},
-}[current_os_name][processor_architecture]
-
-# Stolen from portablemc
 current_os_name = {
     "Linux": "linux", 
     "Windows": "windows", 
@@ -37,6 +30,13 @@ processor_architecture = {
     "armv7l": "arm32",
     "armv6l": "arm32",
 }[platform.machine().lower()]
+
+# Stolen from portablemc
+minecraft_jvm_os = {
+    "osx": {"x86_64": "mac-os", "arm64": "mac-os-arm64"},
+    "linux": {"x86": "linux-i386", "x86_64": "linux"},
+    "windows": {"x86": "windows-x86", "x86_64": "windows-x64", "arm64": "windows-arm64"},
+}[current_os_name][processor_architecture]
 
 def make_executable(file_path):
     st = os.stat(file_path)
@@ -250,6 +250,7 @@ def main():
         with open(lighthouse_config_path, "w") as f:
             json.dump(
                 {
+                    "minecraft_version": version_id,
                     "run_arguments": run_arguments,
                     "java_binary_path": os.path.join(root_path, java_runtime_path, "bin", java_binary_name),
                 },

@@ -4,23 +4,89 @@ import os
 import urllib.request
 import json
 import subprocess
+import sys
+import shutil
 
 def download_json(url):
     with urllib.request.urlopen(url) as response:
         return json.load(response)
 
-try: os.mkdir(fabric_dir := "fabric")
-except: pass
+def main():
+    version_name = sys.argv[1]
 
-try:
-    with open(fabric_version_path := os.path.join(fabric_dir, "fabric_version")) as f:
-        fabric_version = str(f.read())
-except FileNotFoundError:
-    fabric_version = None
+    try: os.mkdir(fabric_dir := "fabric")
+    except: pass
 
-installers = download_json("https://meta.fabricmc.net/v2/versions/installer")
-for installer in installers:
-    if installer["stable"]:
-        if installer["version"] != fabric_version:
-            urllib.request.urlretrieve(installer["url"], fabric_jar_path := os.path.join(fabric_dir, "fabric.jar"))
-        break
+    try:
+        with open(fabric_version_path := os.path.join(fabric_dir, "fabric_version")) as f:
+            fabric_version = str(f.read())
+    except FileNotFoundError:
+        fabric_version = None
+
+    installers = download_json("https://meta.fabricmc.net/v2/versions/installer")
+    for installer in installers:
+        if installer["stable"]:
+            if installer["version"] != fabric_version:
+                urllib.request.urlretrieve(installer["url"], fabric_jar_path := os.path.join(fabric_dir, "fabric.jar"))
+            break
+
+    minecraft_dir = os.path.join("versions", version_name, "state")
+
+    with open(fabric_fake_profiles_path := os.path.join(minecraft_dir, "launcher_profiles.json"), "w") as f:
+        f.write("{}")
+
+    with open(lighthouse_cfg_path := os.path.join("versions", version_name, "lighthouse.config.json")) as f:
+        lighthouse_cfg = json.load(f)
+
+    subprocess.run(["java", "-jar", fabric_jar_path, "client", "-dir", minecraft_dir, "-mcversion", "1.21.3", "-launcher", "win32"])
+
+    new_libs = {}
+    for root, _dirs, filenames in os.walk(new_libraries_dir := os.path.join(minecraft_dir, "libraries")):
+        for filename in filenames:
+            relpath = os.path.relpath(fullpath := os.path.join(root, filename), new_libraries_dir)
+            common, libversion, libfile = relpath.rsplit(os.sep, 2)
+            new_libs[common] = (relpath, fullpath)
+
+    flagged = False
+    for idx, arg in enumerate(lighthouse_cfg["run_arguments"]):
+        if flagged:
+            flagged = False
+            continue
+        if arg.startswith("-"):
+            flagged = True
+        else:
+            classname_idx = idx
+        if arg == "-cp":
+            cp_idx = idx + 1
+    for root, _dirs, files in os.walk(versions_dir := os.path.join(minecraft_dir, "versions")):
+        for file in files:
+            fabric_fake_version_config = json.load(open(os.path.join(root, file)))
+    lighthouse_cfg["run_arguments"][classname_idx] = fabric_fake_version_config["mainClass"]
+    lighthouse_cfg["run_arguments"].extend(fabric_fake_version_config["arguments"]["jvm"])
+
+    classpath = set(lighthouse_cfg["run_arguments"][cp_idx].split(os.pathsep))
+    for lib_path in list(classpath):
+        if lib_path == "client.jar": continue
+        _lower, _lower2, _libraries, *common, _libversion, _libfile = lib_path.split(os.sep)
+        common = os.sep.join(common)
+        if common in new_libs:
+            classpath.remove(lib_path)
+
+    for relpath, fullpath in new_libs.values():
+        lhhomepath = os.path.join("libraries", relpath)
+        classpath.add(os.path.join("..", "..", lhhomepath))
+        dir_, _filename = os.path.split(lhhomepath)
+        os.makedirs(dir_, exist_ok=True)
+        os.rename(fullpath, lhhomepath)
+
+    lighthouse_cfg["run_arguments"][cp_idx] = os.pathsep.join(classpath)
+
+    shutil.rmtree(new_libraries_dir)
+    shutil.rmtree(versions_dir)
+
+    with open(lighthouse_cfg_path, "w") as f:
+        json.dump(lighthouse_cfg, f, indent=4)
+
+    os.remove(fabric_fake_profiles_path)
+
+main()
