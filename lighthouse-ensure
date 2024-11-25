@@ -1,16 +1,23 @@
+#!/usr/bin/python3
+
 import json
 import os
 import sys
 import urllib.request
 import zipfile
 import platform
-import subprocess
 import stat
 import shutil
-import pathlib
 import hashlib
 
 LIGHTHOUSE_CONFIG_NAME = "lighthouse.config.json"
+
+# Stolen from portablemc
+minecraft_jvm_os = {
+    "osx": {"x86_64": "mac-os", "arm64": "mac-os-arm64"},
+    "linux": {"x86": "linux-i386", "x86_64": "linux"},
+    "windows": {"x86": "windows-x86", "x86_64": "windows-x64", "arm64": "windows-arm64"},
+}[current_os_name][processor_architecture]
 
 # Stolen from portablemc
 current_os_name = {
@@ -31,14 +38,9 @@ processor_architecture = {
     "armv6l": "arm32",
 }[platform.machine().lower()]
 
-# Stolen from portablemc
-minecraft_jvm_os = {
-    "osx": {"x86_64": "mac-os", "arm64": "mac-os-arm64"},
-    "linux": {"x86": "linux-i386", "x86_64": "linux"},
-    "windows": {"x86": "windows-x86", "x86_64": "windows-x64", "arm64": "windows-arm64"},
-}[current_os_name][processor_architecture]
-
-### Downloading the version list
+def make_executable(file_path):
+    st = os.stat(file_path)
+    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
 def download_json(url):
     with urllib.request.urlopen(url) as response:
@@ -48,26 +50,6 @@ def get_versions_list():
     #####
     print("Getting the versions list")
     return download_json("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
-
-def make_executable(file_path):
-    st = os.stat(file_path)
-    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
-
-def main():
-    action = sys.argv[1]
-    if action == "list":
-        list_()
-    elif action == "ensure":
-        version_id = sys.argv[2]
-        ensure(version_id)
-    elif action == "run":
-        version_id = sys.argv[2]
-        run(version_id, is_detached=False)
-    elif action == "detach":
-        version_id = sys.argv[2]
-        run(version_id, is_detached=True)
-    else:
-        raise Exception(f"Invalid action name \"{action}\"")
 
 def get_sha1(path):
     with open(path, "rb") as f:
@@ -88,32 +70,12 @@ def ensure_json(url, path, expected_sha1_in_hex):
     with open(path) as f:
         return json.load(f)
 
-def list_():
-    versions_list = get_versions_list()
-    print("LATEST:")
-    print("* Release: " + versions_list["latest"]["release"])
-    print("* Snapshot: " + versions_list["latest"]["snapshot"])
-    print()
-    for version in versions_list["versions"]:
-        print(f"{version['id']} - {version['type'].upper()}")
+def get_version_path(version_name):
+    return os.path.join("versions", version_name)
 
-def get_version_path(version_id):
-    return os.path.join("versions", version_id)
-
-def run(version_id, is_detached):
-    os.chdir(get_version_path(version_id))
-    with open(LIGHTHOUSE_CONFIG_NAME, "r") as f:
-        config = json.load(f)
-    arguments = config["run_arguments"]
-    java_binary_path = config["java_binary_path"]
-    print(f"Starting up {version_id}")
-    if is_detached:
-        subprocess.Popen([java_binary_path, *arguments], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print("Detached")
-    else:
-        subprocess.run([java_binary_path, *arguments])
-
-def ensure(version_id):
+def main():
+    version_id = sys.argv[1]
+    directory_name = sys.argv[2]
     #####
     print("Writing the Lighthouse warning file")
 
@@ -136,7 +98,7 @@ def ensure(version_id):
         except: pass
         return path
     versions_path = mkdir("versions")
-    version_path = mkdir(get_version_path(version_id))
+    version_path = mkdir(get_version_path(directory_name))
     libraries_path = mkdir("libraries")
     natives_path = mkdir("native_libraries")
     state_path = mkdir(os.path.join(version_path, "state"))

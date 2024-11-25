@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+
+import urllib.request
+import json
+
+def download_json(url):
+    with urllib.request.urlopen(url) as response:
+        return json.load(response)
+
+def get_versions_list():
+    print("Getting the versions list")
+    return download_json("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
+
+def main():
+    versions_list = get_versions_list()
+    print("LATEST:")
+    print("* Release: " + versions_list["latest"]["release"])
+    print("* Snapshot: " + versions_list["latest"]["snapshot"])
+    print()
+    for version in versions_list["versions"]:
+        print(f"{version['id']} - {version['type'].upper()}")
+
+main()

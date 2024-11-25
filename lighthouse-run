@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import json
+import subprocess
+
+LIGHTHOUSE_CONFIG_NAME = "lighthouse.config.json"
+
+def get_version_path(version_id):
+    return os.path.join("versions", version_id)
+
+def main():
+    version_id = sys.argv[1]
+    os.chdir(get_version_path(version_id))
+    with open(LIGHTHOUSE_CONFIG_NAME, "r") as f:
+        config = json.load(f)
+    arguments = config["run_arguments"]
+    java_binary_path = config["java_binary_path"]
+    print(f"Starting up {version_id}")
+    subprocess.run([java_binary_path, *arguments])
+
+main()
