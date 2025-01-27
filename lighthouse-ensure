@@ -189,10 +189,13 @@ def main():
             download(natives["url"], path, natives["sha1"])
             with zipfile.ZipFile(path) as f:
                 for member in f.namelist():
-                    for excluded in library["extract"]["exclude"]:
-                        if member.startswith(excluded):
-                            break
-                    else:
+                    try:
+                        for excluded in library["extract"]["exclude"]:
+                            if member.startswith(excluded):
+                                break
+                        else:
+                            raise KeyError()
+                    except KeyError:
                         f.extract(member, natives_path)
 
     #####
